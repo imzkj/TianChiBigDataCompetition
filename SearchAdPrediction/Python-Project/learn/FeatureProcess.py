@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # encoding: utf-8
 
+import  gc
 import numpy as np
 import pandas as pd
 import sys
@@ -20,12 +21,13 @@ from sklearn import metrics
 from  sklearn.linear_model import LogisticRegressionCV
 from scipy.sparse import csc_matrix
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import StandardScaler
 
 ## 设置属性防止中文乱码
 mpl.rcParams['font.sans-serif'] = [u'SimHei']
 mpl.rcParams['axes.unicode_minus'] = False
 
-path = "D:\Git\TianChiBigDataCompetition\SearchAdPrediction\Python-Project\data\\round1_ijcai_18_train_20180301.txt"  # # 数据文件路径
+path = "G:\TianChiBigDataCompetition\SearchAdPrediction\Python-Project\datas\\round1_ijcai_18_train_20180301.txt"  # # 数据文件路径
 
 ## 读取数据
 ### 加载数据后，通过data.columns获取names
@@ -53,22 +55,28 @@ def get_train_data():
     enc = OneHotEncoder(categorical_features='all')
     M_filter = M.loc[M[u'user_gender_id'] != -1].loc[M[u'user_occupation_id'] != -1]
     X_filter = X.loc[X[u'user_gender_id'] != -1].loc[X[u'user_occupation_id'] != -1]
-    print M_filter
     # print X_filter.index
     # for i in X_filter.index:
+    del X
+    del M
+    gc.collect()
     #    print i
     print 'filter finish...'
     enc.fit(M_filter)
     occup_gender_matx = enc.transform(M_filter).toarray()
+    del M_filter
     print 'gender finish'
     user_age_level = X_filter[u'user_age_level']
     user_age_matx = onehotInt(user_age_level)
+    del user_age_level
     user_star_level = X_filter[u'user_star_level']
     user_star_matx = onehotInt(user_star_level)
+    del user_star_level
     # print user_age_level
     # print user_age_level[0]
     item_category_list = X_filter[u'item_category_list']
     item_cate_matx = onehotString(item_category_list)
+    del item_category_list
     print 'cate_matx finish...'
     # item_property_list = X_filter[u'item_property_list']
     # item_prop_matx = onehotString(item_property_list)
@@ -76,23 +84,27 @@ def get_train_data():
     # pass
 
     item_brand_id = X_filter[u'item_brand_id']
-    item_brand_matx = onehotInt(item_brand_id)
+    # item_brand_matx = onehotInt(item_brand_id)
+    del item_brand_id
     print 'brand_matx finish...'
     item_city_id = X_filter[u'item_city_id']
     item_city_matx = onehotInt(item_city_id)
+    del item_city_id
     print 'city_matx finish...'
     item_price_level = X_filter[u'item_price_level']
     item_sales_level = X_filter[u'item_sales_level']
+    #print item_sales_level
     item_collected_level = X_filter[u'item_collected_level']
     item_pv_level = X_filter[u'item_pv_level']
-
+    #print item_pv_level
     context_timestamp = X_filter[u'context_timestamp']
     print 'level finish...'
     context_page_id = X_filter[u'context_page_id']
 
     context_page_matx = onehotInt(context_page_id)
-
+    context_page_id = None
     shop_review_num_level = X_filter[u'shop_review_num_level']
+    #print shop_review_num_level
     shop_review_positive_rate = X_filter[u'shop_review_positive_rate']
     shop_star_level = X_filter[u'shop_star_level']
     shop_score_service = X_filter[u'shop_score_service']
@@ -100,69 +112,65 @@ def get_train_data():
     shop_score_description = X_filter[u'shop_score_description']
     print 'all feature onehot finish...'
     # print item_cate_matx
-
+    #del X_filter
+    gc.collect()
     matx = np.hstack((occup_gender_matx, user_age_matx))
+    occup_gender_matx = None
+    user_age_level = None
+    print '1....'
     matx = np.hstack((matx, user_star_matx))
     matx = np.hstack((matx, item_cate_matx))
-    matx = np.hstack((matx, item_brand_matx))
+    #matx = np.hstack((matx, item_brand_matx))
+    print 'brand...'
     matx = np.hstack((matx, item_city_matx))
-    matx = np.hstack((matx, item_city_matx))
+    price_arr = np.array(item_price_level.tolist())
+    price_arr.shape = (len(price_arr),1)
+    matx = np.hstack((matx, price_arr))
+
+    sales_arr = np.array(item_sales_level.tolist())
+    sales_arr.shape = (len(sales_arr), 1)
+    matx = np.hstack((matx, sales_arr))
+
+    collected_arr = np.array(item_collected_level.tolist())
+    collected_arr.shape = (len(collected_arr), 1)
+    matx = np.hstack((matx, collected_arr))
+
+    pv_arr = np.array(item_pv_level.tolist())
+    pv_arr.shape = (len(pv_arr), 1)
+    matx = np.hstack((matx, pv_arr))
+
+    timestamp_arr = np.array(context_timestamp.tolist())
+    timestamp_arr.shape = (len(timestamp_arr), 1)
+    matx = np.hstack((matx, timestamp_arr))
+    matx = np.hstack((matx,context_page_matx))
+
+    shop_review_num_arr = np.array(shop_review_num_level.tolist())
+    shop_review_num_arr.shape = (len(shop_review_num_arr), 1)
+    matx = np.hstack((matx, shop_review_num_arr))
+
+    shop_review_positive_arr = np.array(shop_review_positive_rate.tolist())
+    shop_review_positive_arr.shape = (len(shop_review_positive_arr), 1)
+    matx = np.hstack((matx, shop_review_positive_arr))
+
+    shop_star_arr = np.array(shop_star_level.tolist())
+    shop_star_arr.shape = (len(shop_star_arr), 1)
+    matx = np.hstack((matx, shop_star_arr))
+
+    shop_score_service_arr = np.array(shop_score_service.tolist())
+    shop_score_service_arr.shape = (len(shop_score_service_arr), 1)
+    matx = np.hstack((matx, shop_score_service_arr))
+
+    shop_score_delivery_arr = np.array(shop_score_delivery.tolist())
+    shop_score_delivery_arr.shape = (len(shop_score_delivery_arr), 1)
+    matx = np.hstack((matx, shop_score_delivery_arr))
+
+    shop_score_description_arr = np.array(shop_score_description.tolist())
+    shop_score_description_arr.shape = (len(shop_score_description_arr), 1)
+    matx = np.hstack((matx, shop_score_description_arr))
+
     print matx.shape
     print 'over...'
-    sys.exit(-1)
-
-    matx = []
-    m = 0
-    for i, j in zip(X_filter.index, xrange(occup_gender_matx.shape[0])):
-        # vec = occup_gender_matx[j].tolist()
-        rmat = np.mat(occup_gender_matx[j])
-        # print user_age_level[i]
-        rmat = np.hstack((rmat, [[user_age_level[i]]]))
-        # vec.append(user_age_level[i])
-        # vec.append(user_star_level[i])
-        rmat = np.hstack((rmat, [[user_star_level[i]]]))
-
-        # vec.extend(item_cate_matx[j])
-        rmat = np.hstack((rmat, item_cate_matx[j]))
-        # vec.extend(item_prop_matx[j])
-        # rmat = np.hstack((rmat, item_prop_matx[j]))
-        # vec.extend(item_brand_matx[j])
-        rmat = np.hstack((rmat, item_brand_matx[j]))
-        # vec.extend(item_city_matx[j])
-        rmat = np.hstack((rmat, item_city_matx[j]))
-
-        # vec.append(item_price_level[i])
-        rmat = np.hstack((rmat, [[item_price_level[i]]]))
-
-        # vec.append(item_sales_level[i])
-        rmat = np.hstack((rmat, [[item_sales_level[i]]]))
-
-        # vec.append(item_collected_level[i])
-        rmat = np.hstack((rmat, [[item_collected_level[i]]]))
-        # vec.append(item_pv_level[i])
-        rmat = np.hstack((rmat, [[item_pv_level[i]]]))
-        # ec.append(context_timestamp[i])
-        rmat = np.hstack((rmat, [[context_timestamp[i]]]))
-        # vec.extend(context_page_matx[j])
-        rmat = np.hstack((rmat, context_page_matx[j]))
-        # vec.append(shop_review_num_level[i])
-        rmat = np.hstack((rmat, [[shop_review_num_level[i]]]))
-
-        # vec.append(shop_review_positive_rate[i])
-        rmat = np.hstack((rmat, [[shop_review_positive_rate[i]]]))
-        # vec.append(shop_star_level[i])
-        rmat = np.hstack((rmat, [[shop_star_level[i]]]))
-        # vec.append(shop_score_service[i])
-        rmat = np.hstack((rmat, [[shop_score_service[i]]]))
-        # vec.append(shop_score_delivery[i])
-        rmat = np.hstack((rmat, [[shop_score_delivery[i]]]))
-        # vec.append(shop_score_description[i])
-        rmat = np.hstack((rmat, [[shop_score_description[i]]]))
-        if m == 0:
-            temp = rmat
-        else:
-            temp = np.vstack((temp, rmat))
-        m += 1
+    #sys.exit(-1)
 
     label = []
 
@@ -171,6 +179,10 @@ def get_train_data():
     print len(label)
     print 'preprofdata ok...'
     X_train, X_test, Y_train, Y_test = train_test_split(matx, label, test_size=0.2)
+    ## 数据正则化操作(归一化)
+    ss = StandardScaler()
+    X_train = ss.fit_transform(X_train) ## 训练正则化模型，并将训练数据归一化操作
+    X_test = ss.fit_transform(X_test) ## 使用训练好的模型对测试数据进行归一化操作
     print 'split finish...'
     # print len(X_train)
     # print len(X_test)
@@ -182,10 +194,10 @@ def get_train_data():
     ## Logistic算法效果输出
     logistic_r = logistic.score(X_train, Y_train)
     print "Logistic算法R值（准确率）：", logistic_r
-    print "Logistic算法稀疏化特征比率：%.2f%%" % (np.mean(logistic_r.coef_.ravel() == 0) * 100)
-    print "Logistic算法参数：", logistic_r.coef_
-    print "Logistic算法截距：", logistic_r.intercept_
-    logistic_r_predict = logistic.predict(X_test)
+    # print "Logistic算法稀疏化特征比率：%.2f%%" % (np.mean(logistic_r.coef_.ravel() == 0) * 100)
+    # print "Logistic算法参数：", logistic_r.coef_
+    # print "Logistic算法截距：", logistic_r.intercept_
+    logistic_r_predict = logistic.predict_proba(X_test)
     print "log_loss value is : ", log_loss(Y_test, logistic_r_predict)
 
 
@@ -193,7 +205,6 @@ def onehotInt(series):
     val_set = set()
     for a in series:
         val_set.add(a)
-    print 'int--offline:', len(val_set)
     lst = list(val_set)
     matx = np.mat(np.zeros((len(series), len(lst))))
     i = 0
@@ -215,7 +226,6 @@ def onehotString(stringSeries):
         for a in vals:
             val_set.add(a)
 
-    print 'offline...', len(val_set)
     lst = list(val_set)
     matx = np.mat(np.zeros((len(stringSeries), len(lst))))  # csc_matrix()
     val_set = None
